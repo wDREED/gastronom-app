@@ -1,0 +1,21 @@
+# База данных и резервные копии
+beer_data.db
+backups/
+
+# Логи
+gastronom.log
+gastronomy.log
+
+# Кэш Python
+__pycache__/
+*.pyc
+
+# Виртуальное окружение (если вдруг создашь)
+venv/
+env/
+
+# Сборки (на будущее, если будем делать .exe)
+build/
+dist/
+*.spec
+.venv/
