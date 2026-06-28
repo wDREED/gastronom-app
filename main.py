@@ -3,8 +3,9 @@ import os
 import shutil
 import tkinter as tk
 from datetime import datetime, timedelta
+from functools import partial
 from tkinter import messagebox, ttk
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 # --- ИМПОРТ НАШИХ СОБСТВЕННЫХ МОДУЛЕЙ ---
 from config import BASE_DIR, DB_PATH, LOG_PATH
@@ -112,6 +113,7 @@ class MainApp:
         self.drag_y: int = 0
         self.drag_item_id: Optional[int] = None
         self.drag_placeholder: Optional[tk.Frame] = None
+        self.selected_todo_id: Optional[int] = None
 
         self.cash_vars: Dict[int, tk.StringVar] = {}
         self.cash_labels: Dict[int, tk.Label] = {}
@@ -363,7 +365,7 @@ class MainApp:
     ) -> None:
         bg_color = "white"
         fg_color = "#333" if not is_done else "#999"
-        font = self.f_content if not is_done else self.f_strike
+        font: Union[Tuple[str, int], Tuple[str, int, str]] = self.f_content if not is_done else self.f_strike
         icon = "○" if not is_done else "✓"
         icon_color = "#ccc" if not is_done else "#FFD700"
 
@@ -404,15 +406,13 @@ class MainApp:
         for w in (inner, lbl):
             w.bind(
                 "<Button-1>",
-                lambda e, widget=card, item_id=db_id: self.on_drag_start(
-                    e, widget, item_id
-                ),
+                lambda e: self.on_drag_start(e, card, db_id),
             )
             w.bind("<B1-Motion>", self.on_drag_motion)
             w.bind("<ButtonRelease-1>", self.on_drag_stop)
             w.bind(
                 "<Button-3>",
-                lambda e, item_id=db_id: self.show_todo_context(e, item_id),
+                lambda e: self.show_todo_context(e, db_id),
             )
 
     def on_drag_start(self, event: Any, widget: tk.Widget, item_id: int) -> None:
@@ -470,7 +470,7 @@ class MainApp:
         )
 
     def delete_selected_todo_context(self) -> None:
-        if hasattr(self, "selected_todo_id") and self.selected_todo_id is not None:
+        if self.selected_todo_id is not None:
             self.delete_todo(self.selected_todo_id)
 
     def save_todo(self, event: Optional[tk.Event] = None) -> None:
@@ -603,7 +603,7 @@ class MainApp:
                 bg="#ffcdd2",
                 relief="flat",
                 cursor="hand2",
-                command=lambda n=nominal: self.change_cash_qty(n, -1),
+                command=partial(self.change_cash_qty, nominal, -1),
             ).grid(row=i, column=1, padx=5)
 
             var = tk.StringVar(value="0")
@@ -630,7 +630,7 @@ class MainApp:
                 bg="#c8e6c9",
                 relief="flat",
                 cursor="hand2",
-                command=lambda n=nominal: self.change_cash_qty(n, 1),
+                command=partial(self.change_cash_qty, nominal, 1),
             ).grid(row=i, column=3, padx=5)
 
             lbl_sum = tk.Label(
@@ -649,7 +649,7 @@ class MainApp:
             if i < len(self.cash_entries) - 1:
                 entry.bind(
                     "<Return>",
-                    lambda e, next_e=self.cash_entries[i + 1]: next_e.focus(),
+                    partial(lambda ne, e: ne.focus(), self.cash_entries[i + 1]),
                 )
 
         total_frame = tk.Frame(main_frame, bg="white", bd=1, relief="raised")
@@ -1529,6 +1529,9 @@ class MainApp:
         cal = calendar.monthcalendar(year, month)
         today = datetime.now().date()
 
+        start_obj = None
+        work_d = 0
+        cycle_len = 0
         try:
             start_obj = datetime.strptime(
                 normalize_date_input(self.cal_start_date.get()), "%d.%m.%Y"
@@ -1537,8 +1540,7 @@ class MainApp:
             rest_d = int(self.cal_rest.get())
             cycle_len = work_d + rest_d
         except ValueError:
-            start_obj = None
-            cycle_len = 0
+            pass
 
         for row in range(6):
             for col in range(7):

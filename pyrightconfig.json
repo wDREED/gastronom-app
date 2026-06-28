@@ -1,0 +1,6 @@
+{
+  "reportUnknownMemberType": false,
+  "reportUnknownLambdaType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnknownVariableType": false
+}
